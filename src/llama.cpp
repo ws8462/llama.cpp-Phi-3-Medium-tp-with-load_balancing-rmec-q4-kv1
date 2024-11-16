@@ -107,8 +107,8 @@
 #define LLAMA_MAX_NODES   8192
 #define LLAMA_MAX_EXPERTS 160
 
-#define NUM_ATTN_HEAD 14
-#define NUM_KV_HEAD 7
+#define NUM_ATTN_HEAD 4
+#define NUM_KV_HEAD 1
 //
 // logging
 //
@@ -6332,13 +6332,13 @@ static bool llm_load_tensors(
                 } break;
             case LLM_ARCH_PHI3:
                 {
-                    model.tok_embd = ml.create_tensor(ctx_input, tn(LLM_TENSOR_TOKEN_EMBD, "weight"), { n_embd, n_vocab });
+                    // model.tok_embd = ml.create_tensor(ctx_input, tn(LLM_TENSOR_TOKEN_EMBD, "weight"), { n_embd, n_vocab });
 
-                    // output
-                    {
-                        model.output_norm = ml.create_tensor(ctx_output, tn(LLM_TENSOR_OUTPUT_NORM, "weight"), { n_embd });
-                        model.output = ml.create_tensor(ctx_output_split, tn(LLM_TENSOR_OUTPUT, "weight"), { n_embd, n_vocab });
-                    }
+                    // // output
+                    // {
+                    //     model.output_norm = ml.create_tensor(ctx_output, tn(LLM_TENSOR_OUTPUT_NORM, "weight"), { n_embd });
+                    //     model.output = ml.create_tensor(ctx_output_split, tn(LLM_TENSOR_OUTPUT, "weight"), { n_embd, n_vocab });
+                    // }
 
                     for (int i = 0; i < n_layer; ++i) {
                         ggml_context* ctx_layer = ctx_for_layer(i);
@@ -10061,8 +10061,8 @@ struct llm_build_context {
         struct ggml_tensor * cur;
         struct ggml_tensor * inpL;
 
-        inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
-
+        //inpL = llm_build_inp_embd(ctx0, lctx, hparams, batch, model.tok_embd, cb);
+        inpL = ggml_new_tensor_4d(ctx0, GGML_TYPE_F32, hparams.n_embd, batch.n_tokens, 1, 1);
         // inp_pos - contains the positions
         struct ggml_tensor * inp_pos = build_inp_pos();
 
@@ -10171,14 +10171,14 @@ struct llm_build_context {
             inpL = cur;
         }
 
-        cur = llm_build_norm(ctx0, inpL, hparams,
-            model.output_norm,
-            NULL,
-            LLM_NORM_RMS, cb, -1);
-        cb(cur, "result_norm", -1);
+        // cur = llm_build_norm(ctx0, inpL, hparams,
+        //     model.output_norm,
+        //     NULL,
+        //     LLM_NORM_RMS, cb, -1);
+        // cb(cur, "result_norm", -1);
 
-        cur = ggml_mul_mat(ctx0, model.output, cur);
-        cb(cur, "result_output", -1);
+        // cur = ggml_mul_mat(ctx0, model.output, cur);
+        // cb(cur, "result_output", -1);
 
         ggml_build_forward_expand(gf, cur);
 
@@ -13139,13 +13139,13 @@ static int llama_decode_internal(
             GGML_ASSERT(strcmp(embd->name, "result_embd_pooled") == 0 && "missing embeddings tensor");
         } else {
             embd = nullptr; // do not extract embeddings when not needed
-            GGML_ASSERT(strcmp(res->name, "result_output") == 0 && "missing result_output tensor");
+            //GGML_ASSERT(strcmp(res->name, "result_output") == 0 && "missing result_output tensor");
         }
         // LLAMA_LOG_INFO("graph build time: %.3f ms (%d nodes, %d leafs)\n", (ggml_time_us() - t_start_us)/1000.0, gf->n_nodes, gf->n_leafs);
 
         ggml_backend_sched_alloc_graph(lctx.sched, gf);
 
-        llama_set_inputs(lctx, u_batch);
+        //llama_set_inputs(lctx, u_batch);
 
         llama_graph_compute(lctx, gf, n_threads);
 
@@ -13176,7 +13176,7 @@ static int llama_decode_internal(
             if (n_outputs_new) {
                 GGML_ASSERT( n_outputs_prev + n_outputs_new <= n_outputs);
                 GGML_ASSERT((n_outputs_prev + n_outputs_new)*n_vocab <= (int64_t) lctx.logits_size);
-                ggml_backend_tensor_get_async(backend_res, res, logits_out, 0, n_outputs_new*n_vocab*sizeof(float));
+                //ggml_backend_tensor_get_async(backend_res, res, logits_out, 0, n_outputs_new*n_vocab*sizeof(float));
             }
         }
 
